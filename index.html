@@ -114,23 +114,59 @@
 
     <!-- EXPENSES -->
     <section>
-      <h2>Expenses</h2>
+      <h2>Controllable expenses</h2>
       <div class="field">
-        <div class="labelrow">
-          <label>Operating expenses</label>
-          <div class="seg" data-mode="expMode">
-            <button data-val="unit">$/unit/yr</button>
-            <button data-val="pct">% of EGI</button>
+        <label for="ctrlUnit">Controllable opex <small>$/unit/yr</small></label>
+        <input id="ctrlUnit" type="text" inputmode="decimal" autocomplete="off">
+        <input id="ctrlUnit-r" type="range" min="1000" max="10000" step="100">
+        <div class="hint">Payroll, repairs &amp; maintenance, turnover, utilities, G&amp;A, marketing</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Non-controllable expenses</h2>
+
+      <div class="group">
+        <div class="grouptitle">Property management <span class="hint" id="mgmt-total"></span></div>
+        <div class="field">
+          <label for="mgmtPct">Fee <small>% of EGI</small></label>
+          <input id="mgmtPct" type="text" inputmode="decimal" autocomplete="off">
+          <input id="mgmtPct-r" type="range" min="0" max="10" step="0.25">
+        </div>
+        <div class="field">
+          <label for="mgmtUnit">Fee <small>$/unit/mo</small></label>
+          <input id="mgmtUnit" type="text" inputmode="decimal" autocomplete="off">
+          <input id="mgmtUnit-r" type="range" min="0" max="150" step="1">
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="grouptitle">Real estate taxes <span class="hint" id="tax-total"></span></div>
+        <div class="two">
+          <div class="field">
+            <label for="assessPct">Assessed <small>% of price</small></label>
+            <input id="assessPct" type="text" inputmode="decimal" autocomplete="off">
+            <input id="assessPct-r" type="range" min="0" max="100" step="1">
+          </div>
+          <div class="field">
+            <label for="millage">Millage <small>mills</small></label>
+            <input id="millage" type="text" inputmode="decimal" autocomplete="off">
+            <input id="millage-r" type="range" min="0" max="50" step="0.1">
           </div>
         </div>
-        <div data-show="expMode:unit">
-          <input id="expUnit" type="text" inputmode="decimal" autocomplete="off">
-          <input id="expUnit-r" type="range" min="2000" max="15000" step="100">
-        </div>
-        <div data-show="expMode:pct">
-          <input id="expPct" type="text" inputmode="decimal" autocomplete="off">
-          <input id="expPct-r" type="range" min="20" max="70" step="0.5">
-        </div>
+        <div class="hint" id="tax-sub"></div>
+      </div>
+
+      <div class="field">
+        <label for="insUnit">Insurance <small>$/unit/yr</small></label>
+        <input id="insUnit" type="text" inputmode="decimal" autocomplete="off">
+        <input id="insUnit-r" type="range" min="0" max="3000" step="25">
+      </div>
+
+      <div class="field">
+        <label for="resUnit">Replacement reserves <small>$/unit/yr</small></label>
+        <input id="resUnit" type="text" inputmode="decimal" autocomplete="off">
+        <input id="resUnit-r" type="range" min="0" max="1000" step="25">
       </div>
     </section>
 
@@ -142,7 +178,13 @@
         <tr><td>Vacancy loss</td><td id="b-vac"></td></tr>
         <tr><td>Other income</td><td id="b-other"></td></tr>
         <tr class="total"><td>Effective gross income</td><td id="b-egi"></td></tr>
-        <tr><td>Expenses</td><td id="b-exp"></td></tr>
+        <tr><td>Controllable</td><td id="b-ctrl"></td></tr>
+        <tr><td>Management</td><td id="b-mgmt"></td></tr>
+        <tr><td>Real estate taxes</td><td id="b-tax"></td></tr>
+        <tr><td>Insurance</td><td id="b-ins"></td></tr>
+        <tr><td>Replacement reserves</td><td id="b-res"></td></tr>
+        <tr class="dim"><td>Non-controllable subtotal</td><td id="b-nonctrl"></td></tr>
+        <tr class="total"><td>Total expenses</td><td id="b-exp"></td></tr>
         <tr class="dim"><td>Per unit · ratio</td><td id="b-exp-sub"></td></tr>
         <tr class="total"><td>NOI</td><td id="b-noi"></td></tr>
         <tr class="dim"><td>NOI per unit</td><td id="b-noi-unit"></td></tr>

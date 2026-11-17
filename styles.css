@@ -168,6 +168,25 @@ input[type="range"]::-moz-range-thumb { width: 30px; height: 30px; border: 0; bo
 
 [data-show][hidden] { display: none; }
 
+.hint { color: var(--muted); font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.group {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 10px 2px;
+  margin-bottom: 14px;
+}
+.group > .hint { margin: -6px 0 10px; }
+.grouptitle {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.grouptitle .hint { margin: 0; font-weight: 400; }
+
 /* Breakdown table */
 .breakdown { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
 .breakdown td { padding: 6px 0; }

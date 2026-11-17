@@ -12,15 +12,22 @@
     otherMode: 'unit', // 'unit' = $/unit/month, 'total' = $/year
     otherUnit: 50,
     otherTotal: 60000,
-    expMode: 'unit',   // 'unit' = $/unit/year, 'pct' = % of EGI
-    expUnit: 6000,
-    expPct: 40,
-    cap: 5.5,          // %
+    ctrlUnit: 3500,    // controllable opex, $/unit/year
+    mgmtPct: 3.5,      // management fee, % of EGI
+    mgmtUnit: 0,       // management fee, $/unit/month (kept in sync with mgmtPct)
+    mgmtAnchor: 'pct', // which management number you typed last
+    assessPct: 80,     // assessed value as % of purchase price
+    millage: 20,       // mills = $ of tax per $1,000 of assessed value
+    insUnit: 600,      // $/unit/year
+    resUnit: 250,      // $/unit/year
+    cap: 5.5,        // %
     price: 0,          // filled in from cap on first run
     anchor: 'cap'      // which pricing number to hold when income/expenses change
   };
 
-  var STORAGE_KEY = 'dealmath.v1';
+  var STORAGE_KEY = 'dealmath.v2';
+  var INPUT_KEYS = ['units', 'rent', 'occ', 'otherUnit', 'otherTotal', 'ctrlUnit',
+    'mgmtPct', 'mgmtUnit', 'assessPct', 'millage', 'insUnit', 'resUnit'];
   var state = load();
 
   // ---------- Formatting helpers ----------
@@ -70,18 +77,48 @@
     var vac = gpr * (1 - state.occ / 100);
     var other = state.otherMode === 'unit' ? state.otherUnit * units * 12 : state.otherTotal;
     var egi = gpr - vac + other;
-    var exp = state.expMode === 'unit' ? state.expUnit * units : egi * state.expPct / 100;
-    var noi = egi - exp;
-    return { gpr: gpr, vac: vac, other: other, egi: egi, exp: exp, noi: noi };
-  }
 
-  // Keep cap and price in sync, holding whichever one you touched last.
-  function syncPricing(noi) {
-    if (state.anchor === 'cap') {
-      state.price = state.cap > 0 && noi > 0 ? noi / (state.cap / 100) : 0;
+    // Controllable
+    var ctrl = state.ctrlUnit * units;
+
+    // Management: % of EGI and $/unit/mo are two views of one number.
+    // Whichever you typed last is held; the other is recalculated.
+    var mgmt;
+    if (state.mgmtAnchor === 'pct') {
+      mgmt = egi * state.mgmtPct / 100;
+      state.mgmtUnit = units > 0 ? mgmt / units / 12 : 0;
     } else {
+      mgmt = state.mgmtUnit * units * 12;
+      state.mgmtPct = egi > 0 ? (mgmt / egi) * 100 : 0;
+    }
+
+    var ins = state.insUnit * units;
+    var res = state.resUnit * units;
+
+    // Taxes = price x assessed % x millage / 1,000.
+    // taxRate is the effective tax as a share of price.
+    var taxRate = (state.assessPct / 100) * (state.millage / 1000);
+    var noiBeforeTax = egi - ctrl - mgmt - ins - res;
+
+    // Pricing. Taxes depend on price, and (when holding the cap rate) price depends
+    // on NOI after taxes. Solving NOI = (NOI before tax - price x taxRate) and
+    // price = NOI / cap together gives: price = NOI before tax / (cap + taxRate).
+    if (state.anchor === 'cap') {
+      var denom = state.cap / 100 + taxRate;
+      state.price = noiBeforeTax > 0 && denom > 0 ? noiBeforeTax / denom : 0;
+    }
+    var tax = state.price * taxRate;
+    var noi = noiBeforeTax - tax;
+    if (state.anchor === 'price') {
       state.cap = state.price > 0 ? (noi / state.price) * 100 : 0;
     }
+
+    var nonCtrl = mgmt + tax + ins + res;
+    return {
+      gpr: gpr, vac: vac, other: other, egi: egi,
+      ctrl: ctrl, mgmt: mgmt, tax: tax, ins: ins, res: res,
+      nonCtrl: nonCtrl, exp: ctrl + nonCtrl, taxRate: taxRate, noi: noi
+    };
   }
 
   // ---------- Wiring up the page ----------
@@ -94,8 +131,13 @@
     occ: function (v) { return plain(v, 1); },
     otherUnit: function (v) { return plain(v, 0); },
     otherTotal: function (v) { return plain(v, 0); },
-    expUnit: function (v) { return plain(v, 0); },
-    expPct: function (v) { return plain(v, 1); },
+    ctrlUnit: function (v) { return plain(v, 0); },
+    mgmtPct: function (v) { return plain(v, 2); },
+    mgmtUnit: function (v) { return plain(v, 2); },
+    assessPct: function (v) { return plain(v, 1); },
+    millage: function (v) { return plain(v, 2); },
+    insUnit: function (v) { return plain(v, 0); },
+    resUnit: function (v) { return plain(v, 0); },
     cap: function (v) { return v > 0 ? v.toFixed(2) : ''; },
     price: function (v) { return v > 0 ? plain(v, 0) : ''; },
     ppd: function (v) { return v > 0 ? plain(v, 0) : ''; }
@@ -118,6 +160,12 @@
     }
   }
 
+  // Typing in a management box makes that one the "held" number
+  var ON_SET = {
+    mgmtPct: function () { state.mgmtAnchor = 'pct'; },
+    mgmtUnit: function () { state.mgmtAnchor = 'unit'; }
+  };
+
   function bindInput(key) {
     var box = $(key), slider = $(key + '-r');
 
@@ -125,6 +173,7 @@
       var v = parse(box.value);
       if (!isFinite(v) || v < 0) return;   // ignore half-typed values
       state[key] = v;
+      if (ON_SET[key]) ON_SET[key]();
       if (slider) { slider.value = v; setSliderFill(slider); }
       update();
     });
@@ -134,6 +183,7 @@
     if (slider) {
       slider.addEventListener('input', function () {
         state[key] = +slider.value;
+        if (ON_SET[key]) ON_SET[key]();
         box.value = FIELD_FMT[key](state[key]);
         setSliderFill(slider);
         update();
@@ -141,7 +191,7 @@
     }
   }
 
-  ['units', 'rent', 'occ', 'otherUnit', 'otherTotal', 'expUnit', 'expPct'].forEach(bindInput);
+  INPUT_KEYS.forEach(bindInput);
 
   // --- Pricing: cap rate (box + slider + nudge buttons), price, price/door ---
   var capBox = $('cap'), capSlider = $('cap-r'), priceBox = $('price'), ppdBox = $('ppd');
@@ -217,13 +267,17 @@
   // ---------- Redraw everything ----------
   function update() {
     var r = compute();
-    syncPricing(r.noi);
 
     var units = state.units;
     var ppd = units > 0 ? state.price / units : NaN;
 
     // Inputs
-    ['units', 'rent', 'occ', 'otherUnit', 'otherTotal', 'expUnit', 'expPct'].forEach(function (k) { show(k, state[k]); });
+    INPUT_KEYS.forEach(function (k) { show(k, state[k]); });
+    $('mgmt-total').textContent = money(r.mgmt) + '/yr';
+    $('tax-total').textContent = money(r.tax) + '/yr';
+    $('tax-sub').textContent = state.price > 0
+      ? (units > 0 ? money(r.tax / units) + '/unit · ' : '') + pct(r.taxRate * 100) + ' of price'
+      : 'Effective rate ' + pct(r.taxRate * 100) + ' of price';
     show('cap', state.cap);
     show('price', state.price);
     if (document.activeElement !== ppdBox) ppdBox.value = FIELD_FMT.ppd(ppd);
@@ -253,6 +307,12 @@
     $('b-vac').textContent = r.vac > 0 ? '(' + money(r.vac) + ')' : money(0);
     $('b-other').textContent = money(r.other);
     $('b-egi').textContent = money(r.egi);
+    $('b-ctrl').textContent = '(' + money(r.ctrl) + ')';
+    $('b-mgmt').textContent = '(' + money(r.mgmt) + ')';
+    $('b-tax').textContent = '(' + money(r.tax) + ')';
+    $('b-ins').textContent = '(' + money(r.ins) + ')';
+    $('b-res').textContent = '(' + money(r.res) + ')';
+    $('b-nonctrl').textContent = '(' + money(r.nonCtrl) + ')';
     $('b-exp').textContent = '(' + money(r.exp) + ')';
     $('b-exp-sub').textContent = (units > 0 ? money(r.exp / units) : '—') + ' · ' + (r.egi > 0 ? pct((r.exp / r.egi) * 100, 1) : '—');
     $('b-noi').textContent = money(r.noi);
