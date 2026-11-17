@@ -1,6 +1,6 @@
 // Simple service worker: saves the app's files on the phone so it opens instantly
 // and works offline. Bump VERSION whenever you deploy changes so phones pick them up.
-const VERSION = 'deal-math-v4';
+const VERSION = 'deal-math-v5';
 const FILES = [
   './',
   'index.html',

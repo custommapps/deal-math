@@ -93,17 +93,47 @@
         <input id="occ-r" type="range" min="70" max="100" step="0.5">
       </div>
 
+      <div class="group">
+        <div class="grouptitle">Concessions <span class="hint" id="conc-total"></span></div>
+        <div class="two">
+          <div class="field">
+            <label for="concWeeks">Free rent <small>weeks</small></label>
+            <input id="concWeeks" type="text" inputmode="decimal" autocomplete="off">
+            <input id="concWeeks-r" type="range" min="0" max="12" step="0.5">
+          </div>
+          <div class="field">
+            <label for="concPct">Loss <small>% of GPR</small></label>
+            <input id="concPct" type="text" inputmode="decimal" autocomplete="off">
+            <input id="concPct-r" type="range" min="0" max="25" step="0.1">
+          </div>
+        </div>
+        <div class="hint">Weeks of free rent at in-place rent, applied to every unit over a year</div>
+      </div>
+
+      <div class="two">
+        <div class="field">
+          <label for="badPct">Bad debt <small>% of GPR</small></label>
+          <input id="badPct" type="text" inputmode="decimal" autocomplete="off">
+          <input id="badPct-r" type="range" min="0" max="5" step="0.1">
+        </div>
+        <div class="field">
+          <label for="nonRevUnits">Non-revenue <small>units</small></label>
+          <input id="nonRevUnits" type="text" inputmode="numeric" autocomplete="off">
+          <input id="nonRevUnits-r" type="range" min="0" max="20" step="1">
+        </div>
+      </div>
+
       <div class="field">
         <div class="labelrow">
           <label>Other income</label>
           <div class="seg" data-mode="otherMode">
-            <button data-val="unit">$/unit/mo</button>
+            <button data-val="unit">$/unit/yr</button>
             <button data-val="total">$/yr total</button>
           </div>
         </div>
         <div data-show="otherMode:unit">
-          <input id="otherUnit" type="text" inputmode="decimal" autocomplete="off">
-          <input id="otherUnit-r" type="range" min="0" max="300" step="5">
+          <input id="otherUnitYr" type="text" inputmode="decimal" autocomplete="off">
+          <input id="otherUnitYr-r" type="range" min="0" max="4000" step="25">
         </div>
         <div data-show="otherMode:total">
           <input id="otherTotal" type="text" inputmode="decimal" autocomplete="off">
@@ -181,6 +211,10 @@
       <table class="breakdown">
         <tr><td>Gross potential rent</td><td id="b-gpr"></td></tr>
         <tr><td>Vacancy loss</td><td id="b-vac"></td></tr>
+        <tr><td>Concessions</td><td id="b-conc"></td></tr>
+        <tr><td>Bad debt</td><td id="b-bad"></td></tr>
+        <tr><td>Non-revenue units</td><td id="b-nonrev"></td></tr>
+        <tr class="total"><td>Net rental income</td><td id="b-nri"></td></tr>
         <tr><td>Other income</td><td id="b-other"></td></tr>
         <tr class="total"><td>Effective gross income</td><td id="b-egi"></td></tr>
         <tr><td>Controllable</td><td id="b-ctrl"></td></tr>

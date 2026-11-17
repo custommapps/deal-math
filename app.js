@@ -9,8 +9,12 @@
     units: 100,
     rent: 1500,        // $/unit/month
     occ: 95,           // %
-    otherMode: 'unit', // 'unit' = $/unit/month, 'total' = $/year
-    otherUnit: 50,
+    concWeeks: 0,      // weeks of free rent per unit per year
+    concPct: 0,        // same thing as % of GPR (kept in sync with concWeeks)
+    badPct: 0.5,       // bad debt, % of GPR
+    nonRevUnits: 0,    // models, offices, employee units (lost at in-place rent)
+    otherMode: 'unit', // 'unit' = $/unit/year, 'total' = $/year
+    otherUnitYr: 600,
     otherTotal: 60000,
     ctrlUnit: 3500,    // controllable opex, $/unit/year
     ctrlPct: 0,        // controllable opex, % of EGI (kept in sync with ctrlUnit)
@@ -28,7 +32,8 @@
   };
 
   var STORAGE_KEY = 'dealmath.v2';
-  var INPUT_KEYS = ['units', 'rent', 'occ', 'otherUnit', 'otherTotal', 'ctrlUnit', 'ctrlPct',
+  var INPUT_KEYS = ['units', 'rent', 'occ', 'concWeeks', 'concPct', 'badPct', 'nonRevUnits',
+    'otherUnitYr', 'otherTotal', 'ctrlUnit', 'ctrlPct',
     'mgmtPct', 'mgmtUnit', 'assessPct', 'millage', 'insUnit', 'resUnit'];
   var state = load();
 
@@ -77,8 +82,12 @@
     var units = state.units;
     var gpr = units * state.rent * 12;
     var vac = gpr * (1 - state.occ / 100);
-    var other = state.otherMode === 'unit' ? state.otherUnit * units * 12 : state.otherTotal;
-    var egi = gpr - vac + other;
+    var conc = gpr * state.concPct / 100;          // = units x weeks x weekly rent
+    var bad = gpr * state.badPct / 100;
+    var nonRev = state.nonRevUnits * state.rent * 12;
+    var nri = gpr - vac - conc - bad - nonRev;
+    var other = state.otherMode === 'unit' ? state.otherUnitYr * units : state.otherTotal;
+    var egi = nri + other;
 
     // Controllable: $/unit/yr and % of EGI are two views of one number.
     // Whichever you typed last is held; the other is recalculated.
@@ -125,7 +134,7 @@
 
     var nonCtrl = mgmt + tax + ins + res;
     return {
-      gpr: gpr, vac: vac, other: other, egi: egi,
+      gpr: gpr, vac: vac, conc: conc, bad: bad, nonRev: nonRev, nri: nri, other: other, egi: egi,
       ctrl: ctrl, mgmt: mgmt, tax: tax, ins: ins, res: res,
       nonCtrl: nonCtrl, exp: ctrl + nonCtrl, taxRate: taxRate, noi: noi
     };
@@ -139,7 +148,11 @@
     units: function (v) { return plain(v, 0); },
     rent: function (v) { return plain(v, 0); },
     occ: function (v) { return plain(v, 1); },
-    otherUnit: function (v) { return plain(v, 0); },
+    concWeeks: function (v) { return plain(v, 2); },
+    concPct: function (v) { return plain(v, 2); },
+    badPct: function (v) { return plain(v, 2); },
+    nonRevUnits: function (v) { return plain(v, 0); },
+    otherUnitYr: function (v) { return plain(v, 0); },
     otherTotal: function (v) { return plain(v, 0); },
     ctrlUnit: function (v) { return plain(v, 0); },
     ctrlPct: function (v) { return plain(v, 2); },
@@ -173,6 +186,9 @@
 
   // Typing in a management box makes that one the "held" number
   var ON_SET = {
+    // Concessions: weeks free per year as a share of 52 weeks = % of GPR
+    concWeeks: function () { state.concPct = state.concWeeks / 52 * 100; },
+    concPct: function () { state.concWeeks = state.concPct / 100 * 52; },
     ctrlUnit: function () { state.ctrlAnchor = 'unit'; },
     ctrlPct: function () { state.ctrlAnchor = 'pct'; },
     mgmtPct: function () { state.mgmtAnchor = 'pct'; },
@@ -286,6 +302,7 @@
 
     // Inputs
     INPUT_KEYS.forEach(function (k) { show(k, state[k]); });
+    $('conc-total').textContent = money(r.conc) + '/yr';
     $('ctrl-total').textContent = money(r.ctrl) + '/yr';
     $('mgmt-total').textContent = money(r.mgmt) + '/yr';
     $('tax-total').textContent = money(r.tax) + '/yr';
@@ -319,6 +336,10 @@
     // Breakdown
     $('b-gpr').textContent = money(r.gpr);
     $('b-vac').textContent = r.vac > 0 ? '(' + money(r.vac) + ')' : money(0);
+    $('b-conc').textContent = r.conc > 0 ? '(' + money(r.conc) + ')' : money(0);
+    $('b-bad').textContent = r.bad > 0 ? '(' + money(r.bad) + ')' : money(0);
+    $('b-nonrev').textContent = r.nonRev > 0 ? '(' + money(r.nonRev) + ')' : money(0);
+    $('b-nri').textContent = money(r.nri);
     $('b-other').textContent = money(r.other);
     $('b-egi').textContent = money(r.egi);
     $('b-ctrl').textContent = '(' + money(r.ctrl) + ')';
@@ -340,6 +361,10 @@
     var base = JSON.parse(JSON.stringify(DEFAULTS));
     try {
       var saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      // Older versions stored other income per unit per MONTH; convert to per year
+      if (saved && typeof saved.otherUnit === 'number' && saved.otherUnitYr === undefined) {
+        saved.otherUnitYr = saved.otherUnit * 12;
+      }
       if (saved && typeof saved === 'object') {
         Object.keys(base).forEach(function (k) {
           if (typeof saved[k] === typeof base[k]) base[k] = saved[k];
