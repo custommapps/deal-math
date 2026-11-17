@@ -1,9 +1,11 @@
 // Simple service worker: saves the app's files on the phone so it opens instantly
 // and works offline. Bump VERSION whenever you deploy changes so phones pick them up.
-const VERSION = 'deal-math-v1';
+const VERSION = 'deal-math-v2';
 const FILES = [
   './',
   'index.html',
+  'styles.css',
+  'app.js',
   'manifest.json',
   'icons/apple-touch-icon.png',
   'icons/icon-192.png',

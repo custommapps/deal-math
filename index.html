@@ -12,38 +12,147 @@
   <meta name="apple-mobile-web-app-title" content="Deal Math">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <meta name="theme-color" content="#0f1b2d">
+  <meta name="format-detection" content="telephone=no">
 
   <link rel="manifest" href="manifest.json">
-
-  <style>
-    html, body { margin: 0; height: 100%; background: #0f1b2d; color: #fff; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
-      text-align: center;
-    }
-    h1 { font-size: 44px; margin: 0 0 8px; }
-    p  { font-size: 18px; color: #9fb3c8; margin: 4px 0; }
-    .mode { margin-top: 24px; font-size: 14px; color: #3ddc97; }
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Deal Math</h1>
-  <p>Hello world. The pipeline works.</p>
-  <p class="mode" id="mode"></p>
 
-  <script>
-    // Shows whether you opened it from the home screen icon (full screen) or in Safari
-    var standalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-    document.getElementById('mode').textContent = standalone
-      ? 'Running full screen from your home screen ✓'
-      : 'Running in the browser. Add to Home Screen to go full screen.';
+  <!-- RESULTS: stays pinned at the top while you scroll the inputs -->
+  <header class="results">
+    <div class="tile">
+      <div class="label">NOI</div>
+      <div class="big" id="out-noi">—</div>
+      <div class="sub" id="out-noi-sub">&nbsp;</div>
+    </div>
+    <div class="tile">
+      <div class="label" id="out-value-label">Value</div>
+      <div class="big" id="out-value">—</div>
+      <div class="sub" id="out-value-sub">&nbsp;</div>
+    </div>
+    <div class="tile">
+      <div class="label">Price / door</div>
+      <div class="big" id="out-ppd">—</div>
+      <div class="sub" id="out-ppd-sub">&nbsp;</div>
+    </div>
+    <div class="tile">
+      <div class="label" id="out-cap-label">Cap rate</div>
+      <div class="big accent" id="out-cap">—</div>
+      <div class="sub" id="out-cap-sub">&nbsp;</div>
+    </div>
+  </header>
 
-    // Register the service worker (lets the app load fast and work offline)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
-    }
-  </script>
+  <main>
+
+    <!-- PRICING -->
+    <section>
+      <h2>Pricing <span class="hold" id="hold-note"></span></h2>
+
+      <div class="field">
+        <label for="cap">Cap rate</label>
+        <div class="row">
+          <button class="nudge" data-nudge="-0.05" aria-label="Cap rate down 5 bps">−</button>
+          <input id="cap" type="text" inputmode="decimal" autocomplete="off">
+          <button class="nudge" data-nudge="0.05" aria-label="Cap rate up 5 bps">+</button>
+        </div>
+        <input id="cap-r" type="range" min="3" max="10" step="0.05">
+      </div>
+
+      <div class="two">
+        <div class="field">
+          <label for="price">Price</label>
+          <input id="price" type="text" inputmode="decimal" autocomplete="off" placeholder="e.g. 18.5m">
+        </div>
+        <div class="field">
+          <label for="ppd">Price / door</label>
+          <input id="ppd" type="text" inputmode="decimal" autocomplete="off" placeholder="e.g. 185k">
+        </div>
+      </div>
+    </section>
+
+    <!-- INCOME -->
+    <section>
+      <h2>Income</h2>
+
+      <div class="field">
+        <label for="units">Units</label>
+        <input id="units" type="text" inputmode="numeric" autocomplete="off">
+        <input id="units-r" type="range" min="1" max="400" step="1">
+      </div>
+
+      <div class="field">
+        <label for="rent">Avg in-place rent <small>$/unit/mo</small></label>
+        <input id="rent" type="text" inputmode="decimal" autocomplete="off">
+        <input id="rent-r" type="range" min="500" max="5000" step="25">
+      </div>
+
+      <div class="field">
+        <label for="occ">Occupancy <small>%</small></label>
+        <input id="occ" type="text" inputmode="decimal" autocomplete="off">
+        <input id="occ-r" type="range" min="70" max="100" step="0.5">
+      </div>
+
+      <div class="field">
+        <div class="labelrow">
+          <label>Other income</label>
+          <div class="seg" data-mode="otherMode">
+            <button data-val="unit">$/unit/mo</button>
+            <button data-val="total">$/yr total</button>
+          </div>
+        </div>
+        <div data-show="otherMode:unit">
+          <input id="otherUnit" type="text" inputmode="decimal" autocomplete="off">
+          <input id="otherUnit-r" type="range" min="0" max="300" step="5">
+        </div>
+        <div data-show="otherMode:total">
+          <input id="otherTotal" type="text" inputmode="decimal" autocomplete="off">
+          <input id="otherTotal-r" type="range" min="0" max="1000000" step="5000">
+        </div>
+      </div>
+    </section>
+
+    <!-- EXPENSES -->
+    <section>
+      <h2>Expenses</h2>
+      <div class="field">
+        <div class="labelrow">
+          <label>Operating expenses</label>
+          <div class="seg" data-mode="expMode">
+            <button data-val="unit">$/unit/yr</button>
+            <button data-val="pct">% of EGI</button>
+          </div>
+        </div>
+        <div data-show="expMode:unit">
+          <input id="expUnit" type="text" inputmode="decimal" autocomplete="off">
+          <input id="expUnit-r" type="range" min="2000" max="15000" step="100">
+        </div>
+        <div data-show="expMode:pct">
+          <input id="expPct" type="text" inputmode="decimal" autocomplete="off">
+          <input id="expPct-r" type="range" min="20" max="70" step="0.5">
+        </div>
+      </div>
+    </section>
+
+    <!-- BREAKDOWN -->
+    <section>
+      <h2>Breakdown</h2>
+      <table class="breakdown">
+        <tr><td>Gross potential rent</td><td id="b-gpr"></td></tr>
+        <tr><td>Vacancy loss</td><td id="b-vac"></td></tr>
+        <tr><td>Other income</td><td id="b-other"></td></tr>
+        <tr class="total"><td>Effective gross income</td><td id="b-egi"></td></tr>
+        <tr><td>Expenses</td><td id="b-exp"></td></tr>
+        <tr class="dim"><td>Per unit · ratio</td><td id="b-exp-sub"></td></tr>
+        <tr class="total"><td>NOI</td><td id="b-noi"></td></tr>
+        <tr class="dim"><td>NOI per unit</td><td id="b-noi-unit"></td></tr>
+      </table>
+    </section>
+
+    <button id="reset" class="reset">Reset to defaults</button>
+    <p class="foot">Tip: type shorthand like <b>18.5m</b> or <b>185k</b>. Your last inputs are remembered on this phone.</p>
+  </main>
+
+  <script src="app.js"></script>
 </body>
 </html>
