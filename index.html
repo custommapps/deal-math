@@ -114,11 +114,16 @@
 
     <!-- EXPENSES -->
     <section>
-      <h2>Controllable expenses</h2>
+      <h2>Controllable expenses <span class="hold" id="ctrl-total"></span></h2>
       <div class="field">
         <label for="ctrlUnit">Controllable opex <small>$/unit/yr</small></label>
         <input id="ctrlUnit" type="text" inputmode="decimal" autocomplete="off">
         <input id="ctrlUnit-r" type="range" min="1000" max="10000" step="100">
+      </div>
+      <div class="field">
+        <label for="ctrlPct">Controllable opex <small>% of EGI</small></label>
+        <input id="ctrlPct" type="text" inputmode="decimal" autocomplete="off">
+        <input id="ctrlPct-r" type="range" min="5" max="50" step="0.5">
         <div class="hint">Payroll, repairs &amp; maintenance, turnover, utilities, G&amp;A, marketing</div>
       </div>
     </section>

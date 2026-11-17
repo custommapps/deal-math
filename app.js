@@ -13,6 +13,8 @@
     otherUnit: 50,
     otherTotal: 60000,
     ctrlUnit: 3500,    // controllable opex, $/unit/year
+    ctrlPct: 0,        // controllable opex, % of EGI (kept in sync with ctrlUnit)
+    ctrlAnchor: 'unit',// which controllable number you typed last
     mgmtPct: 3.5,      // management fee, % of EGI
     mgmtUnit: 0,       // management fee, $/unit/month (kept in sync with mgmtPct)
     mgmtAnchor: 'pct', // which management number you typed last
@@ -26,7 +28,7 @@
   };
 
   var STORAGE_KEY = 'dealmath.v2';
-  var INPUT_KEYS = ['units', 'rent', 'occ', 'otherUnit', 'otherTotal', 'ctrlUnit',
+  var INPUT_KEYS = ['units', 'rent', 'occ', 'otherUnit', 'otherTotal', 'ctrlUnit', 'ctrlPct',
     'mgmtPct', 'mgmtUnit', 'assessPct', 'millage', 'insUnit', 'resUnit'];
   var state = load();
 
@@ -78,8 +80,16 @@
     var other = state.otherMode === 'unit' ? state.otherUnit * units * 12 : state.otherTotal;
     var egi = gpr - vac + other;
 
-    // Controllable
-    var ctrl = state.ctrlUnit * units;
+    // Controllable: $/unit/yr and % of EGI are two views of one number.
+    // Whichever you typed last is held; the other is recalculated.
+    var ctrl;
+    if (state.ctrlAnchor === 'pct') {
+      ctrl = egi * state.ctrlPct / 100;
+      state.ctrlUnit = units > 0 ? ctrl / units : 0;
+    } else {
+      ctrl = state.ctrlUnit * units;
+      state.ctrlPct = egi > 0 ? (ctrl / egi) * 100 : 0;
+    }
 
     // Management: % of EGI and $/unit/mo are two views of one number.
     // Whichever you typed last is held; the other is recalculated.
@@ -132,6 +142,7 @@
     otherUnit: function (v) { return plain(v, 0); },
     otherTotal: function (v) { return plain(v, 0); },
     ctrlUnit: function (v) { return plain(v, 0); },
+    ctrlPct: function (v) { return plain(v, 2); },
     mgmtPct: function (v) { return plain(v, 2); },
     mgmtUnit: function (v) { return plain(v, 2); },
     assessPct: function (v) { return plain(v, 1); },
@@ -162,6 +173,8 @@
 
   // Typing in a management box makes that one the "held" number
   var ON_SET = {
+    ctrlUnit: function () { state.ctrlAnchor = 'unit'; },
+    ctrlPct: function () { state.ctrlAnchor = 'pct'; },
     mgmtPct: function () { state.mgmtAnchor = 'pct'; },
     mgmtUnit: function () { state.mgmtAnchor = 'unit'; }
   };
@@ -273,6 +286,7 @@
 
     // Inputs
     INPUT_KEYS.forEach(function (k) { show(k, state[k]); });
+    $('ctrl-total').textContent = money(r.ctrl) + '/yr';
     $('mgmt-total').textContent = money(r.mgmt) + '/yr';
     $('tax-total').textContent = money(r.tax) + '/yr';
     $('tax-sub').textContent = state.price > 0
